@@ -13,6 +13,12 @@
     "db:migrate": "prisma migrate deploy",
     "db:seed": "tsx prisma/seed.ts",
     "db:setup": "docker compose up -d && prisma migrate deploy && tsx prisma/seed.ts",
+    "db:status": "node scripts/switch-db.mjs status",
+    "db:use:sqlite": "node scripts/switch-db.mjs sqlite",
+    "db:use:postgres": "node scripts/switch-db.mjs postgres",
+    "db:fresh": "node scripts/switch-db.mjs fresh",
+    "db:fresh:sqlite": "node scripts/switch-db.mjs sqlite --fresh",
+    "db:fresh:postgres": "node scripts/switch-db.mjs postgres --fresh",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test"
