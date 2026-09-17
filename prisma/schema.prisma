@@ -1,0 +1,208 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id             String    @id @default(cuid())
+  phone          String    @unique
+  pinHash        String
+  locale         String    @default("bn")
+  fontScale      String    @default("normal")
+  role           String    @default("seller")
+  failedPinCount Int       @default(0)
+  lockedUntil    DateTime?
+  shop           Shop?
+  createdAt      DateTime  @default(now())
+}
+
+model Shop {
+  id               String             @id @default(cuid())
+  userId           String             @unique
+  user             User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  slug             String             @unique
+  name             String
+  category         String             @default("general")
+  themeId          String             @default("shada-dokaan")
+  cover            String?
+  avatar           String?
+  fbPageUrl        String?
+  whatsapp         String?
+  callPhone        String?
+  bkashNumber      String?
+  nagadNumber      String?
+  dhakaFeePoisha   Int                @default(6000)
+  outsideFeePoisha Int                @default(12000)
+  freeOverPoisha   Int?
+  advanceEnabled   Boolean            @default(false)
+  advancePoisha    Int                @default(10000)
+  paused           Boolean            @default(false)
+  pauseReason      String             @default("manual") // "manual" | "due" | "admin"
+  language         String             @default("bn")
+  disabled         Boolean            @default(false)
+  products         Product[]
+  orders           Order[]
+  templates        MessageTemplate[]
+  blockedPhones    BlockedPhone[]
+  ledgerEntries    LedgerEntry[]
+  payments         ShopPayment[]
+  landingPages     LandingPage[]
+  createdAt        DateTime           @default(now())
+}
+
+model Product {
+  id              String      @id @default(cuid())
+  shopId          String
+  shop            Shop        @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  slug            String
+  title           String
+  pricePoisha     Int
+  compareAtPoisha Int?
+  photos          String      @default("[]")
+  stock           Int         @default(99)
+  active          Boolean     @default(true)
+  badge           String?
+  variants        String      @default("[]")
+  hideWhenZero    Boolean     @default(false)
+  isSample        Boolean     @default(false)
+  createdAt       DateTime      @default(now())
+  orderItems      OrderItem[]
+  landingPages    LandingPage[]
+
+  @@unique([shopId, slug])
+  @@index([shopId, active])
+}
+
+model Order {
+  id                String        @id @default(cuid())
+  shopId            String
+  shop              Shop          @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  code              String        @unique
+  customerName      String
+  phone             String
+  isDhaka           Boolean
+  district          String?
+  address           String
+  landmark          String?
+  geoLat            Float?
+  geoLng            Float?
+  payMethod         String
+  trxId             String?
+  screenshotUrl     String?
+  advancePoisha     Int           @default(0)
+  deliveryFeePoisha Int
+  subtotalPoisha    Int
+  totalPoisha       Int
+  platformFeePoisha Int           @default(500)
+  feeReversedAt     DateTime?
+  idempotencyKey    String?       @unique
+  status            String        @default("new")
+  sellerNote        String?
+  items             OrderItem[]
+  ledgerEntries     LedgerEntry[]
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  @@index([shopId, createdAt])
+  @@index([shopId, status])
+  @@index([shopId, phone])
+}
+
+model OrderItem {
+  id          String  @id @default(cuid())
+  orderId     String
+  order       Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId   String
+  product     Product @relation(fields: [productId], references: [id])
+  title       String
+  variant     String?
+  qty         Int
+  pricePoisha Int
+}
+
+model MessageTemplate {
+  id     String @id @default(cuid())
+  shopId String
+  shop   Shop   @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  key    String
+  body   String
+
+  @@unique([shopId, key])
+}
+
+model BlockedPhone {
+  id     String @id @default(cuid())
+  shopId String
+  shop   Shop   @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  phone  String
+
+  @@unique([shopId, phone])
+}
+
+model LedgerEntry {
+  id             String   @id @default(cuid())
+  shopId         String
+  shop           Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  orderId        String?
+  order          Order?   @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  paymentId      String?
+  type           String   // "order_fee" | "fee_reversal" | "topup" | "adjust"
+  amountPoisha   Int      // positive is debit (shop owes), negative is credit (payment or reversal)
+  idempotencyKey String?  @unique
+  note           String?
+  actor          String   @default("system")
+  createdAt      DateTime @default(now())
+
+  @@index([shopId, createdAt])
+}
+
+model ShopPayment {
+  id            String    @id @default(cuid())
+  shopId        String
+  shop          Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  method        String    // "bkash" | "nagad"
+  trxId         String    @unique
+  screenshotUrl String?
+  amountPoisha  Int
+  status        String    @default("pending") // "pending" | "confirmed" | "rejected"
+  reviewedBy    String?
+  reviewedAt    DateTime?
+  createdAt     DateTime  @default(now())
+
+  @@index([shopId])
+}
+
+model PlatformSettings {
+  id                String @id @default("default")
+  feePerOrderPoisha Int    @default(500)
+  duePausePoisha    Int    @default(50000)
+  platformBkash     String @default("01XXXXXXXXX")
+  platformNagad     String @default("01XXXXXXXXX")
+}
+
+model LandingPage {
+  id              String    @id @default(cuid())
+  shopId          String
+  shop            Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  slug            String
+  title           String
+  headline        String?
+  subheadline     String?
+  template        String    @default("single-hero") // "single-hero" | "flash-sale" | "combo-bundle" | "gadget-tech" | "luxury-boutique"
+  productId       String?
+  product         Product?  @relation(fields: [productId], references: [id], onDelete: SetNull)
+  heroImage       String?
+  features        String    @default("[]")
+  countdownEndsAt DateTime?
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@unique([shopId, slug])
+}

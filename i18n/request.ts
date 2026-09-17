@@ -1,0 +1,16 @@
+import { cookies } from "next/headers";
+import { getRequestConfig } from "next-intl/server";
+import { routing } from "./routing";
+
+export default getRequestConfig(async () => {
+  const jar = await cookies();
+  const cookie = jar.get("NEXT_LOCALE")?.value;
+  const locale = routing.locales.includes(cookie as "bn" | "en")
+    ? (cookie as "bn" | "en")
+    : routing.defaultLocale;
+
+  return {
+    locale,
+    messages: (await import(`../messages/${locale}.json`)).default,
+  };
+});

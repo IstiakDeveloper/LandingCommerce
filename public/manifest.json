@@ -1,0 +1,12 @@
+﻿{
+  "name": "দোকানদারি",
+  "short_name": "DokanDari",
+  "start_url": "/app",
+  "display": "standalone",
+  "background_color": "#f6efe6",
+  "theme_color": "#c45c26",
+  "lang": "bn",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
